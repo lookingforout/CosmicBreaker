@@ -1,270 +1,208 @@
 package CosmicBreaker;
 
-import javax.swing.*;
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Rectangle;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
-import java.util.Random;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.Timer;
 
-public class Cbreaker extends JFrame implements KeyListener {
-    public static final int WIDTH = 500;
-    public static final int HEIGHT = 500;
-    public static final int PLAYER_WIDTH = 20;
-    public static final int PLAYER_HEIGHT = 20;
-    public static final int ENEMY_WIDTH = 20;
-    public static final int ENEMY_HEIGHT = 20;
-    public static final int PLAYER_SPEED = 5;
-    public static final int BULLET_SPEED = 5;
-    public static final int ENEMY_FIRE_INTERVAL = 1000;
-
-    public JPanel gamePanel;
-    public Player player;
-    public List<Enemy> enemies;
-    public List<Bullet> playerBullets;
-    public List<Bullet> enemyBullets;
-    public Random random;
-    public long lastEnemyFireTime;
-    public boolean gameover;
-    public int kills;
+public class Cbreaker extends JPanel implements KeyListener, ActionListener {
+    private int playerX = 250;
+    private List<Rectangle> enemies;
+    private List<Rectangle> enemyProjectiles;
+    private List<Rectangle> playerProjectiles;
+    private boolean enemyMovingRight = true;
+    private Timer timer;
+    private boolean isGameOver = false;
 
     public Cbreaker() {
-        setTitle("Space Invaders");
-        setSize(WIDTH, HEIGHT);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setResizable(false);
-        setLocationRelativeTo(null);
-        setLayout(new BorderLayout());
+        JFrame frame = new JFrame("Cosmic Breaker");
+        frame.setSize(600, 400);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setResizable(false);
+        frame.add(this);
+        frame.addKeyListener(this);
+        frame.setVisible(true);
 
-        gamePanel = new JPanel() {
-            @Override
-            public void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                render(g);
+        enemies = createEnemies();
+        enemyProjectiles = new ArrayList<>();
+        playerProjectiles = new ArrayList<>();
 
-            }
-        };
-        gamePanel.setBackground(Color.BLACK);
-        add(gamePanel, BorderLayout.CENTER);
-        addKeyListener(this);
-
-        player = new Player(WIDTH / 2 - PLAYER_WIDTH / 2, HEIGHT - PLAYER_HEIGHT - 10);
-        enemies = new ArrayList<>();
-        playerBullets = new ArrayList<>();
-        enemyBullets = new ArrayList<>();
-        random = new Random();
-        lastEnemyFireTime = System.currentTimeMillis();
-        gameover = false;
-        kills = 0;
-        spawnEnemies();
-        setVisible(true);
-        gameLoop();
+        timer = new Timer(10, this);
+        timer.start();
     }
-    public void gameLoop() {
-        while (!gameover) {
-            update();
-            gamePanel.repaint();
-            try {
-                Thread.sleep(10);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+
+    public void paint(Graphics g) {
+        g.setColor(Color.BLACK);
+        g.fillRect(0, 0, getWidth(), getHeight());
+
+        if (isGameOver) {
+            g.setColor(Color.RED);
+            g.setFont(new Font("Courier New", Font.BOLD, 36));
+            g.drawString("Game Over", 200, 200);
+        } else {
+            g.setColor(Color.RED);
+            g.setFont(new Font("Courier New", Font.PLAIN, 24));
+            g.drawString("<o>", playerX, 350);
+
+            g.setColor(Color.BLUE);
+            g.setFont(new Font("Courier New", Font.PLAIN, 24));
+            for (Rectangle enemy : enemies) {
+                g.drawString("<[]>", enemy.x, enemy.y);
+            }
+
+            g.setColor(Color.WHITE);
+            for (Rectangle projectile : playerProjectiles) {
+                g.fillRect(projectile.x, projectile.y, 5, 10);
+            }
+
+            g.setColor(Color.ORANGE);
+            for (Rectangle projectile : enemyProjectiles) {
+                g.fillRect(projectile.x, projectile.y, 5, 10);
             }
         }
     }
-    public void update() {
-        player.update();
-        for (Bullet bullet : playerBullets) {
-            bullet.update();
-            if (bullet.getY() < 0) {
-                playerBullets.remove(bullet);
-                break;
+
+    public void actionPerformed(ActionEvent e) {
+        if (!isGameOver) {
+            moveEnemies();
+            moveProjectiles();
+            checkCollision();
+        }
+        repaint();
+    }
+
+    public void movePlayer(int direction) {
+        if (direction == KeyEvent.VK_LEFT && playerX > 0) {
+            playerX -= 10;
+        } else if (direction == KeyEvent.VK_RIGHT && playerX < getWidth() - 50) {
+            playerX += 10;
+        }
+    }
+
+    public void moveEnemies() {
+        if (enemyMovingRight) {
+            for (Rectangle enemy : enemies) {
+                enemy.x += 5;
+                if (enemy.x >= getWidth() - 50) {
+                    enemyMovingRight = false;
+                }
             }
-            for (Enemy enemy : enemies) {
-                if (bullet.intersects(enemy.getBounds())) {
-                    playerBullets.remove(bullet);
-                    enemies.remove(enemy);
-                    kills++;
+        } else {
+            for (Rectangle enemy : enemies) {
+                enemy.x -= 5;
+                if (enemy.x <= 0) {
+                    enemyMovingRight = true;
+                }
+            }
+        }
+
+        if (Math.random() < 0.01) {
+            Rectangle randomEnemy = enemies.get((int) (Math.random() * enemies.size()));
+            Rectangle enemyProjectile = new Rectangle(randomEnemy.x + 22, randomEnemy.y + 20, 5, 10);
+            enemyProjectiles.add(enemyProjectile);
+        }
+    }
+
+    public void moveProjectiles() {
+        for (Iterator<Rectangle> iterator = playerProjectiles.iterator(); iterator.hasNext(); ) {
+            Rectangle projectile = iterator.next();
+            projectile.y -= 5;
+            if (projectile.y <= 0) {
+                iterator.remove();
+            }
+        }
+
+        for (Iterator<Rectangle> iterator = enemyProjectiles.iterator(); iterator.hasNext(); ) {
+            Rectangle projectile = iterator.next();
+            projectile.y += 5;
+            if (projectile.y >= getHeight()) {
+                iterator.remove();
+            }
+        }
+    }
+
+    public void checkCollision() {
+        for (Iterator<Rectangle> iterator = playerProjectiles.iterator(); iterator.hasNext(); ) {
+            Rectangle playerProjectile = iterator.next();
+            for (Iterator<Rectangle> enemyIterator = enemies.iterator(); enemyIterator.hasNext(); ) {
+                Rectangle enemy = enemyIterator.next();
+                if (playerProjectile.intersects(enemy)) {
+                    iterator.remove();
+                    enemyIterator.remove();
                     break;
                 }
             }
         }
-        for (Bullet bullet : enemyBullets) {
-            bullet.update();
-            if (bullet.getY() > HEIGHT) {
-                enemyBullets.remove(bullet);
+
+        for (Iterator<Rectangle> iterator = enemyProjectiles.iterator(); iterator.hasNext(); ) {
+            Rectangle enemyProjectile = iterator.next();
+            if (enemyProjectile.intersects(playerX, 350, 50, 20)) {
+                iterator.remove();
+                isGameOver = true;
                 break;
             }
-            if (bullet.intersects(player.getBounds())) {
-                endGame();
-                break;
-            }
         }
-        long currentTime = System.currentTimeMillis();
-        if (currentTime - lastEnemyFireTime > ENEMY_FIRE_INTERVAL) {
-            lastEnemyFireTime = currentTime;
+    }
 
-            if (!enemies.isEmpty()) {
-                Enemy randomEnemy = enemies.get(random.nextInt(enemies.size()));
-                enemyBullets.add(new Bullet(randomEnemy.getX() + ENEMY_WIDTH / 2, randomEnemy.getY() + ENEMY_HEIGHT));
-            }
-        }
+    public void firePlayerProjectile() {
+        Rectangle projectile = new Rectangle(playerX + 22, 340, 5, 10);
+        playerProjectiles.add(projectile);
     }
-    public void endGame() {
-        gameover = true;
-        JOptionPane.showMessageDialog(this, "Game Over!\nKills: " + kills);
-        System.exit(0);
-    }
-    public void render(Graphics g) {
-        if (gameover) {
-            g.setColor(Color.RED);
-            g.setFont(new Font("Arial", Font.BOLD, 40));
-            g.drawString("Game Over", WIDTH / 2 - 100, HEIGHT / 2);
-            g.drawString("Kills: " + kills, WIDTH / 2 - 60, HEIGHT / 2 + 40);
-            return;
-        }
-        player.draw(g);
 
-        for (Enemy enemy : enemies) {
-            enemy.draw(g);
-        }
-        for (Bullet bullet : playerBullets) {
-            bullet.draw(g);
-        }
-        for (Bullet bullet : enemyBullets) {
-            bullet.draw(g);
-        }
-        g.setColor(Color.WHITE);
-        g.setFont(new Font("Arial", Font.BOLD, 20));
-        g.drawString("Kills: " + kills, WIDTH - 120, 30);
-    }
-    public void spawnEnemies() {
-        int startX = 50;
-        int startY = 50;
-        int enemyRows = 4;
-        int enemyCols = 10;
+    public void keyTyped(KeyEvent e) {}
 
-        for (int row = 0; row < enemyRows; row++) {
-            for (int col = 0; col < enemyCols; col++) {
-                int x = startX + col * (ENEMY_WIDTH + 10);
-                int y = startY + row * (ENEMY_HEIGHT + 10);
-                enemies.add(new Enemy(x, y));
-            }
-        }
-    }
-    @Override
     public void keyPressed(KeyEvent e) {
         int keyCode = e.getKeyCode();
-
-        if (keyCode == KeyEvent.VK_LEFT) {
-            player.setVelocity(-PLAYER_SPEED, 0);
-        } else if (keyCode == KeyEvent.VK_RIGHT) {
-            player.setVelocity(PLAYER_SPEED, 0);
-        } else if (keyCode == KeyEvent.VK_SPACE) {
-            playerBullets.add(new Bullet(player.getX() + PLAYER_WIDTH / 2, player.getY()));
-        }
-    }
-    @Override
-    public void keyReleased(KeyEvent e) {
-        int keyCode = e.getKeyCode();
         if (keyCode == KeyEvent.VK_LEFT || keyCode == KeyEvent.VK_RIGHT) {
-            player.setVelocity(0, 0);
-        }
-    }
-    @Override
-    public void keyTyped(KeyEvent e) {
-    }
-    public static class Player {
-        public int x;
-        public int y;
-        public int velocityX;
-        public int velocityY;
-        public Player(int x, int y) {
-            this.x = x;
-            this.y = y;
-        }
-        public int getX() {
-            return x;
-        }
-        public int getY() {
-            return y;
-        }
-        public void setVelocity(int velocityX, int velocityY) {
-            this.velocityX = velocityX;
-            this.velocityY = velocityY;
-        }
-        public void update() {
-            x += velocityX;
-            y += velocityY;
-
-            if (x < 0) {
-                x = 0;
-            } else if (x > WIDTH - PLAYER_WIDTH) {
-                x = WIDTH - PLAYER_WIDTH;
+            movePlayer(keyCode);
+        } else if (keyCode == KeyEvent.VK_SPACE) {
+            if (!isGameOver) {
+                firePlayerProjectile();
+            } else {
+                restartGame();
             }
         }
-        public void draw(Graphics g) {
-            g.setColor(Color.RED);
-            g.drawString("<o>", x, y + PLAYER_HEIGHT);
-        }
-        public Rectangle getBounds() {
-            return new Rectangle(x, y, PLAYER_WIDTH, PLAYER_HEIGHT);
-        }
-        public boolean intersects(Rectangle rect) {
-            return getBounds().intersects(rect);
-        }
     }
-    private static class Enemy {
-        public int x;
-        public int y;
-        public Enemy(int x, int y) {
-            this.x = x;
-            this.y = y;
+
+    public void keyReleased(KeyEvent e) {}
+
+    private List<Rectangle> createEnemies() {
+        List<Rectangle> enemies = new ArrayList<>();
+        int startX = 100;
+        int startY = 50;
+        int enemyWidth = 50;
+        int enemyHeight = 20;
+
+        for (int row = 0; row < 2; row++) {
+            for (int col = 0; col < 5; col++) {
+                int x = startX + col * 100;
+                int y = startY + row * 50;
+                Rectangle enemy = new Rectangle(x, y, enemyWidth, enemyHeight);
+                enemies.add(enemy);
+            }
         }
-        public int getX() {
-            return x;
-        }
-        public int getY() {
-            return y;
-        }
-        public void draw(Graphics g) {
-            g.setColor(Color.BLUE);
-            g.drawString("<[]>", x, y + ENEMY_HEIGHT);
-        }
-        public Rectangle getBounds() {
-            return new Rectangle(x, y, ENEMY_WIDTH, ENEMY_HEIGHT);
-        }
-        public boolean intersects(Rectangle rect) {
-            return getBounds().intersects(rect);
-        }
+
+        return enemies;
     }
-    private static class Bullet {
-        public int x;
-        public int y;
-        public Bullet(int x, int y) {
-            this.x = x;
-            this.y = y;
-        }
-        public int getX() {
-            return x;
-        }
-        public int getY() {
-            return y;
-        }
-        public void update() {
-            y += BULLET_SPEED;
-        }
-        public void draw(Graphics g) {
-            g.setColor(Color.WHITE);
-            g.fillRect(x, y, 2, 5);
-        }
-        public Rectangle getBounds() {
-            return new Rectangle(x, y, 2, 5);
-        }
-        public boolean intersects(Rectangle rect) {
-            return getBounds().intersects(rect);
-        }
+
+    private void restartGame() {
+        playerX = 250;
+        enemies = createEnemies();
+        enemyProjectiles.clear();
+        playerProjectiles.clear();
+        isGameOver = false;
     }
+
     public static void main(String[] args) {
         new Cbreaker();
     }
