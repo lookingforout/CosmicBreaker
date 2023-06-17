@@ -23,10 +23,14 @@ public class Cbreaker extends JPanel implements KeyListener, ActionListener {
     private boolean enemyMovingRight = true;
     private Timer timer;
     private boolean isGameOver = false;
+    private boolean isGameWon = false;
+    private int score = 0;
+    private int time = 0;
+    private final int GAME_DURATION = 60 * 1000; // 60 seconds
 
     public Cbreaker() {
         JFrame frame = new JFrame("Cosmic Breaker");
-        frame.setSize(600, 400);
+        frame.setSize(600, 600);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setResizable(false);
         frame.add(this);
@@ -48,7 +52,15 @@ public class Cbreaker extends JPanel implements KeyListener, ActionListener {
         if (isGameOver) {
             g.setColor(Color.RED);
             g.setFont(new Font("Courier New", Font.BOLD, 36));
-            g.drawString("Game Over", 200, 200);
+            g.drawString("Nqma salam za teb", 200, 200);
+            g.setFont(new Font("Courier New", Font.BOLD, 24));
+            g.drawString("Score: " + score, 250, 250);
+        } else if (isGameWon) {
+            g.setColor(Color.GREEN);
+            g.setFont(new Font("Courier New", Font.BOLD, 36));
+            g.drawString("SAMO SALAMIIIII", 220, 200);
+            g.setFont(new Font("Courier New", Font.BOLD, 24));
+            g.drawString("Score: " + score, 250, 250);
         } else {
             g.setColor(Color.RED);
             g.setFont(new Font("Courier New", Font.PLAIN, 24));
@@ -69,14 +81,26 @@ public class Cbreaker extends JPanel implements KeyListener, ActionListener {
             for (Rectangle projectile : enemyProjectiles) {
                 g.fillRect(projectile.x, projectile.y, 5, 10);
             }
+
+            g.setColor(Color.WHITE);
+            g.setFont(new Font("Courier New", Font.BOLD, 16));
+            g.drawString("Score: " + score, 10, 20);
+            g.drawString("Time: " + (GAME_DURATION - time) / 1000, 10, 40);
         }
     }
 
     public void actionPerformed(ActionEvent e) {
-        if (!isGameOver) {
+        if (!isGameOver && !isGameWon) {
             moveEnemies();
             moveProjectiles();
             checkCollision();
+            time += 10;
+            if (time >= GAME_DURATION) {
+                isGameOver = true;
+            }
+            if (enemies.isEmpty()) {
+                isGameWon = true;
+            }
         }
         repaint();
     }
@@ -114,7 +138,7 @@ public class Cbreaker extends JPanel implements KeyListener, ActionListener {
     }
 
     public void moveProjectiles() {
-        for (Iterator<Rectangle> iterator = playerProjectiles.iterator(); iterator.hasNext(); ) {
+        for (Iterator<Rectangle> iterator = playerProjectiles.iterator(); iterator.hasNext();) {
             Rectangle projectile = iterator.next();
             projectile.y -= 5;
             if (projectile.y <= 0) {
@@ -122,7 +146,7 @@ public class Cbreaker extends JPanel implements KeyListener, ActionListener {
             }
         }
 
-        for (Iterator<Rectangle> iterator = enemyProjectiles.iterator(); iterator.hasNext(); ) {
+        for (Iterator<Rectangle> iterator = enemyProjectiles.iterator(); iterator.hasNext();) {
             Rectangle projectile = iterator.next();
             projectile.y += 5;
             if (projectile.y >= getHeight()) {
@@ -132,19 +156,20 @@ public class Cbreaker extends JPanel implements KeyListener, ActionListener {
     }
 
     public void checkCollision() {
-        for (Iterator<Rectangle> iterator = playerProjectiles.iterator(); iterator.hasNext(); ) {
+        for (Iterator<Rectangle> iterator = playerProjectiles.iterator(); iterator.hasNext();) {
             Rectangle playerProjectile = iterator.next();
-            for (Iterator<Rectangle> enemyIterator = enemies.iterator(); enemyIterator.hasNext(); ) {
+            for (Iterator<Rectangle> enemyIterator = enemies.iterator(); enemyIterator.hasNext();) {
                 Rectangle enemy = enemyIterator.next();
                 if (playerProjectile.intersects(enemy)) {
                     iterator.remove();
                     enemyIterator.remove();
+                    score += 10;
                     break;
                 }
             }
         }
 
-        for (Iterator<Rectangle> iterator = enemyProjectiles.iterator(); iterator.hasNext(); ) {
+        for (Iterator<Rectangle> iterator = enemyProjectiles.iterator(); iterator.hasNext();) {
             Rectangle enemyProjectile = iterator.next();
             if (enemyProjectile.intersects(playerX, 350, 50, 20)) {
                 iterator.remove();
@@ -166,7 +191,7 @@ public class Cbreaker extends JPanel implements KeyListener, ActionListener {
         if (keyCode == KeyEvent.VK_LEFT || keyCode == KeyEvent.VK_RIGHT) {
             movePlayer(keyCode);
         } else if (keyCode == KeyEvent.VK_SPACE) {
-            if (!isGameOver) {
+            if (!isGameOver && !isGameWon) {
                 firePlayerProjectile();
             } else {
                 restartGame();
@@ -192,6 +217,15 @@ public class Cbreaker extends JPanel implements KeyListener, ActionListener {
             }
         }
 
+        // Add 10 more enemies
+        int additionalEnemies = 10;
+        for (int i = 0; i < additionalEnemies; i++) {
+            int x = startX + (i % 5) * 100;
+            int y = startY + 100 + (i / 5) * 50;
+            Rectangle enemy = new Rectangle(x, y, enemyWidth, enemyHeight);
+            enemies.add(enemy);
+        }
+
         return enemies;
     }
 
@@ -201,6 +235,9 @@ public class Cbreaker extends JPanel implements KeyListener, ActionListener {
         enemyProjectiles.clear();
         playerProjectiles.clear();
         isGameOver = false;
+        isGameWon = false;
+        score = 0;
+        time = 0;
     }
 
     public static void main(String[] args) {
