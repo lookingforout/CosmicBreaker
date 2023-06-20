@@ -52,19 +52,19 @@ public class Cbreaker extends JPanel implements KeyListener, ActionListener {
         if (isGameOver) {
             g.setColor(Color.RED);
             g.setFont(new Font("Courier New", Font.BOLD, 36));
-            g.drawString("Nqma salam za teb", 200, 200);
+            g.drawString("GAME OVER!", 200, 200);
             g.setFont(new Font("Courier New", Font.BOLD, 24));
             g.drawString("Score: " + score, 250, 250);
         } else if (isGameWon) {
             g.setColor(Color.GREEN);
             g.setFont(new Font("Courier New", Font.BOLD, 36));
-            g.drawString("SAMO SALAMIIIII", 220, 200);
+            g.drawString("YOU WIN!", 220, 200);
             g.setFont(new Font("Courier New", Font.BOLD, 24));
             g.drawString("Score: " + score, 250, 250);
         } else {
             g.setColor(Color.RED);
             g.setFont(new Font("Courier New", Font.PLAIN, 24));
-            g.drawString("<o>", playerX, 350);
+            g.drawString("<o>", playerX, 550);
 
             g.setColor(Color.BLUE);
             g.setFont(new Font("Courier New", Font.PLAIN, 24));
@@ -171,7 +171,7 @@ public class Cbreaker extends JPanel implements KeyListener, ActionListener {
 
         for (Iterator<Rectangle> iterator = enemyProjectiles.iterator(); iterator.hasNext();) {
             Rectangle enemyProjectile = iterator.next();
-            if (enemyProjectile.intersects(playerX, 350, 50, 20)) {
+            if (enemyProjectile.intersects(playerX, 550, 50, 20)) {
                 iterator.remove();
                 isGameOver = true;
                 break;
